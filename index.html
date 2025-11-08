@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Electric Current Analogies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+<style>
+  @keyframes move-twink-back {
+    from {background-position:0 0;}
+    to {background-position:-10000px 5000px;}
+  }
+  .stars, .twinkling {
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .stars {
+    background:#000 url(https://www.script-tutorials.com/demos/360/images/stars.png) repeat top center;
+    z-index:-2;
+  }
+  .twinkling{
+    background:transparent url(https://www.script-tutorials.com/demos/360/images/twinkling.png) repeat top center;
+    z-index:-1;
+    animation:move-twink-back 200s linear infinite;
+  }
+</style>
+</head>
+  <body class="bg-black text-slate-100">
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+    <div id="root" class="relative z-10"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
