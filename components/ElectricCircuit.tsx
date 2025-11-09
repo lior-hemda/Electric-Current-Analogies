@@ -259,12 +259,12 @@ const ElectricCircuit: React.FC = () => {
           </filter>
           <radialGradient id="plasmaGradient">
             <stop offset="0%" stopColor="white" />
-            <stop offset="40%" stopColor="#76e6ff" />
-            <stop offset="100%" stopColor="#00a3c4" />
+            <stop offset="40%" stopColor="#ff8a8a" />
+            <stop offset="100%" stopColor="#d32f2f" />
           </radialGradient>
           <linearGradient id="plasmaTailGradient">
-            <stop offset="0%" stopColor="rgba(118, 230, 255, 0.8)" />
-            <stop offset="100%" stopColor="rgba(118, 230, 255, 0)" />
+            <stop offset="0%" stopColor="rgba(255, 138, 138, 0.8)" />
+            <stop offset="100%" stopColor="rgba(255, 138, 138, 0)" />
           </linearGradient>
           <radialGradient id="bulbGlassGradient" cx="0.3" cy="0.3">
             <stop offset="0%" stopColor="rgba(209, 213, 229, 0.1)" />

@@ -275,6 +275,12 @@ const WaterCircuit: React.FC = () => {
                 <stop offset="0%" stopColor="rgba(14, 165, 233, 0.6)" />
                 <stop offset="100%" stopColor="rgba(2, 132, 199, 0.8)" />
                </linearGradient>
+               <filter id="waterRipple" x="-10%" y="-10%" width="120%" height="120%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="2" seed="2" result="turbulence">
+                      <animate attributeName="baseFrequency" dur="8s" values="0.02 0.05;0.03 0.06;0.02 0.05" repeatCount="indefinite" />
+                  </feTurbulence>
+                  <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
             </defs>
 
             <path d={gravityPipePath} stroke="#1e293b" strokeWidth={pipeStrokeWidth + 4} fill="none" strokeLinecap="round"/>
@@ -298,12 +304,12 @@ const WaterCircuit: React.FC = () => {
             
             <g>
               <rect x="180" y={topReservoirY} width="80" height="30" fill="rgba(14, 165, 233, 0.2)" stroke="#60a5fa" strokeWidth="1.5" rx="5" />
-              <rect x="182" y={topReservoirY + 2} width="76" height="26" fill="url(#waterSurfaceGradient)" rx="3" />
+              <rect x="182" y={topReservoirY + 2} width="76" height="26" fill="url(#waterSurfaceGradient)" rx="3" filter="url(#waterRipple)" />
               <text x="220" y={topReservoirY - 5} textAnchor="middle" fontSize="10" fill="#93c5fd" className="font-semibold">מאגר עליון</text>
             </g>
             <g>
               <rect x="20" y={bottomReservoirY} width="80" height="30" fill="rgba(14, 165, 233, 0.2)" stroke="#60a5fa" strokeWidth="1.5" rx="5" />
-              <rect x="22" y={bottomReservoirY + 2} width="76" height="26" fill="url(#waterSurfaceGradient)" rx="3" />
+              <rect x="22" y={bottomReservoirY + 2} width="76" height="26" fill="url(#waterSurfaceGradient)" rx="3" filter="url(#waterRipple)" />
               <text x="60" y={bottomReservoirY - 5} textAnchor="middle" fontSize="10" fill="#93c5fd" className="font-semibold">מאגר תחתון</text>
             </g>
 

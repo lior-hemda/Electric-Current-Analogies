@@ -282,10 +282,6 @@ const PlaygroundSlide: React.FC = () => {
                 <stop offset="50%" stopColor="#f9fafb" />
                 <stop offset="100%" stopColor="#9ca3af" />
             </linearGradient>
-            <radialGradient id="figureGradient">
-               <stop offset="0%" stopColor="#81e6d9" />
-               <stop offset="100%" stopColor="#2dd4bf" />
-            </radialGradient>
             <filter id="figureShadow" x="-50%" y="-50%" width="200%" height="200%">
                 <feDropShadow dx="1" dy="2" stdDeviation="1.5" floodColor="#000" floodOpacity="0.4" />
             </filter>
@@ -312,7 +308,7 @@ const PlaygroundSlide: React.FC = () => {
           
           return (
             <g key={kid.id} transform={`translate(${x} ${y})`} filter="url(#figureShadow)">
-                <circle cx="0" cy="-11" r="4" fill="url(#figureGradient)" />
+                <circle cx="0" cy="-11" r="4" fill="#22c55e" />
                 <rect x="-4" y="-7" width="8" height="9" rx="2" fill="#334155" />
                 <rect x="-4" y="2" width="3" height="6" rx="1.5" fill="#475569" />
                 <rect x="1" y="2" width="3" height="6" rx="1.5" fill="#475569" />

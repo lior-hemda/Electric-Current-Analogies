@@ -96,7 +96,7 @@ const App: React.FC = () => {
 
   // The main layout is a CSS Grid to ensure header/footer are always visible.
   return (
-    <div className="h-screen text-slate-200 p-4 sm:p-6 lg:p-8 font-sans grid grid-rows-[auto_auto_1fr_auto] gap-6">
+    <div className="h-screen text-slate-200 p-4 sm:p-6 lg:p-8 font-sans grid grid-rows-[auto_auto_1fr] gap-6">
       <header className="text-center">
         <h1 className="text-4xl sm:text-5xl font-bold text-cyan-300 tracking-tight drop-shadow-[0_2px_2px_rgba(0,255,255,0.3)]">הבנת זרם חשמלי: אנלוגיות</h1>
       </header>
@@ -164,10 +164,6 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
-      
-      <footer className="text-center text-slate-500">
-        <p>פותח להדגמה חינוכית</p>
-      </footer>
     </div>
   );
 };
