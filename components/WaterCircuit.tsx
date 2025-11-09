@@ -8,6 +8,7 @@ const PARTICLE_COUNT = 40;
 const INITIAL_HEIGHT_DIFFERENCE = 50;
 const INITIAL_PIPE_WIDTH = 50;
 const VOLUME_PER_PARTICLE = 0.05; // Liters
+const CROSSING_POINT = 450; // A point in the suction pipe for measurement.
 
 const getParticlePosition = (progress: number, particleId: number, totalParticles: number, width: number, strokeWidth: number, heightDifference: number) => {
     const topY = 180 - (heightDifference / 100) * 140;
@@ -67,37 +68,57 @@ const WaterCircuit: React.FC = () => {
   
   const animationFrameId = useRef<number | null>(null);
   const heightDifferenceRef = useRef(heightDifference);
-  const particlesCrossed = useRef(0);
-  const lastMeasureTime = useRef(performance.now());
+  const pipeWidthRef = useRef(pipeWidth);
+  const crossingsTimestampsRef = useRef<number[]>([]);
+  const lastUiUpdateTimeRef = useRef(0);
   const measureRateRef = useRef(measureRate);
 
   useEffect(() => {
     measureRateRef.current = measureRate;
     if (!measureRate) {
-      particlesCrossed.current = 0;
-      lastMeasureTime.current = performance.now();
+      crossingsTimestampsRef.current = [];
       setDisplayRate(0);
+    } else {
+      crossingsTimestampsRef.current = [];
+      lastUiUpdateTimeRef.current = performance.now();
     }
   }, [measureRate]);
 
   useEffect(() => {
     heightDifferenceRef.current = heightDifference;
   }, [heightDifference]);
+
+  useEffect(() => {
+    pipeWidthRef.current = pipeWidth;
+  }, [pipeWidth]);
   
 
   const runSimulation = useCallback(() => {
-    if (measureRateRef.current) {
-        const now = performance.now();
-        if (now - lastMeasureTime.current >= 1000) {
-            setDisplayRate(particlesCrossed.current * VOLUME_PER_PARTICLE);
-            particlesCrossed.current = 0;
-            lastMeasureTime.current = now;
+    const now = performance.now();
+
+    // Update UI display at a throttled rate using a rolling average
+    if (measureRateRef.current && now - lastUiUpdateTimeRef.current > 100) {
+        const fiveSecondsAgo = now - 5000;
+        const recentTimestamps = crossingsTimestampsRef.current.filter(t => t >= fiveSecondsAgo);
+        crossingsTimestampsRef.current = recentTimestamps;
+
+        let rate = 0;
+        if (recentTimestamps.length > 1) {
+            const timeSpanSeconds = (recentTimestamps[recentTimestamps.length - 1] - recentTimestamps[0]) / 1000;
+            if (timeSpanSeconds > 0) {
+                rate = (recentTimestamps.length - 1) / timeSpanSeconds;
+            }
         }
+        setDisplayRate(rate * VOLUME_PER_PARTICLE);
+        lastUiUpdateTimeRef.current = now;
     }
     
     const currentHeightDifference = heightDifferenceRef.current;
-    const pumpSpeed = 3; 
-    const gravitySpeed = 0.5 + (currentHeightDifference / 100) * 4;
+    const currentPipeWidth = pipeWidthRef.current;
+    const widthFactor = 0.2 + 0.8 * ((currentPipeWidth - 10) / 90);
+
+    const pumpSpeed = 3 * widthFactor; 
+    const gravitySpeed = (0.5 + (currentHeightDifference / 100) * 4) * widthFactor;
 
     setParticles(currentParticles => {
       let shouldTurbineSpin = false;
@@ -105,15 +126,18 @@ const WaterCircuit: React.FC = () => {
       const newParticles = currentParticles.map(p => {
         const currentProgressMod = p.progress % TOTAL_PATH_LENGTH;
         let speed = (currentProgressMod < 350) ? gravitySpeed : pumpSpeed;
+
+        const oldProgressMod = p.progress % TOTAL_PATH_LENGTH;
         const newProgress = p.progress + speed;
+        const newProgressMod = newProgress % TOTAL_PATH_LENGTH;
 
         if (measureRateRef.current) {
-            if (p.progress % TOTAL_PATH_LENGTH > 950 && newProgress % TOTAL_PATH_LENGTH <= 950) {
-                particlesCrossed.current++;
+            if (oldProgressMod < CROSSING_POINT && newProgressMod >= CROSSING_POINT) {
+                crossingsTimestampsRef.current.push(performance.now());
             }
         }
 
-        if (currentProgressMod < 350 && gravitySpeed > 0.5) shouldTurbineSpin = true;
+        if (currentProgressMod < 350 && gravitySpeed > 0.1) shouldTurbineSpin = true;
         return { ...p, progress: newProgress };
       });
       
@@ -310,9 +334,9 @@ const WaterCircuit: React.FC = () => {
 
             {measureRate && (
               <g>
-                  <line x1={20 - pipeStrokeWidth-2} y1="270" x2={20 + pipeStrokeWidth+2} y2="270" stroke="#fde047" strokeWidth="2" strokeDasharray="3 3" />
-                  <rect x="30" y="260" width="85" height="22" fill="rgba(0,0,0,0.7)" rx="4" />
-                  <text x="72" y="275" textAnchor="middle" fill="#fde047" fontSize="12" fontWeight="bold">
+                  <line x1={20 - pipeStrokeWidth-2} y1="260" x2={20 + pipeStrokeWidth+2} y2="260" stroke="#fde047" strokeWidth="2" strokeDasharray="3 3" />
+                  <rect x="30" y="250" width="85" height="22" fill="rgba(0,0,0,0.7)" rx="4" />
+                  <text x="72" y="265" textAnchor="middle" fill="#fde047" fontSize="12" fontWeight="bold">
                       {displayRate.toFixed(2)} L/s
                   </text>
               </g>

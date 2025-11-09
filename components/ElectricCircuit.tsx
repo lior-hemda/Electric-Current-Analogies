@@ -8,6 +8,7 @@ const PARTICLE_COUNT = 30;
 const INITIAL_VOLTAGE = 50;
 const INITIAL_WIRE_WIDTH = 50;
 const CHARGE_PER_PARTICLE = 0.01; // Coulombs
+const CROSSING_POINT = 950; // A point used to detect a full loop completion for measurement.
 
 const getParticlePosition = (progress: number, particleId: number, totalParticles: number, width: number, strokeWidth: number) => {
   const numLanes = Math.max(1, Math.floor(width / 20));
@@ -62,44 +63,63 @@ const ElectricCircuit: React.FC = () => {
   });
 
   const animationFrameId = useRef<number | null>(null);
-  const particlesCrossed = useRef(0);
-  const lastMeasureTime = useRef(performance.now());
+  const crossingsTimestampsRef = useRef<number[]>([]);
+  const lastUiUpdateTimeRef = useRef(0);
   const measureRateRef = useRef(measureRate);
 
   useEffect(() => {
     measureRateRef.current = measureRate;
     if (!measureRate) {
-      particlesCrossed.current = 0;
-      lastMeasureTime.current = performance.now();
+      crossingsTimestampsRef.current = [];
       setDisplayRate(0);
+    } else {
+      crossingsTimestampsRef.current = [];
+      lastUiUpdateTimeRef.current = performance.now();
     }
   }, [measureRate]);
 
 
   const runSimulation = useCallback(() => {
-    if (measureRateRef.current) {
-        const now = performance.now();
-        if (now - lastMeasureTime.current >= 1000) {
-            setDisplayRate(particlesCrossed.current * CHARGE_PER_PARTICLE);
-            particlesCrossed.current = 0;
-            lastMeasureTime.current = now;
+    const now = performance.now();
+
+    // Update UI display at a throttled rate using a rolling average
+    if (measureRateRef.current && now - lastUiUpdateTimeRef.current > 100) {
+        const fiveSecondsAgo = now - 5000;
+        const recentTimestamps = crossingsTimestampsRef.current.filter(t => t >= fiveSecondsAgo);
+        crossingsTimestampsRef.current = recentTimestamps;
+
+        let rate = 0;
+        // We need at least 2 points to calculate a rate over an interval
+        if (recentTimestamps.length > 1) {
+            const timeSpanSeconds = (recentTimestamps[recentTimestamps.length - 1] - recentTimestamps[0]) / 1000;
+            if (timeSpanSeconds > 0) {
+                // Rate = (number of intervals) / (time for those intervals)
+                rate = (recentTimestamps.length - 1) / timeSpanSeconds;
+            }
         }
+        setDisplayRate(rate * CHARGE_PER_PARTICLE);
+        lastUiUpdateTimeRef.current = now;
     }
 
     setParticles(prevParticles => {
-      const speed = (voltage / 100) * 4;
+      const widthFactor = 0.2 + 0.8 * ((wireWidth - 10) / 90); // Scale from 0.2 to 1.0
+      const speed = (voltage / 100) * 4 * widthFactor;
       return prevParticles.map(p => {
+        const oldProgressMod = p.progress % TOTAL_PATH_LENGTH;
         const newProgress = p.progress + speed;
+        const newProgressMod = newProgress % TOTAL_PATH_LENGTH;
+
         if (measureRateRef.current) {
-            if (p.progress % TOTAL_PATH_LENGTH > 900 && newProgress % TOTAL_PATH_LENGTH <= 900) {
-                 particlesCrossed.current++;
+            // This detects crossing the wrap-around point from a high value to a low one.
+            if (oldProgressMod > CROSSING_POINT && newProgressMod <= CROSSING_POINT) {
+                 crossingsTimestampsRef.current.push(performance.now());
             }
         }
         return { ...p, progress: newProgress };
       });
     });
     animationFrameId.current = requestAnimationFrame(runSimulation);
-  }, [voltage]);
+  }, [voltage, wireWidth]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -132,14 +152,14 @@ const ElectricCircuit: React.FC = () => {
   const normalizedVoltage = voltage / 100;
   const normalizedWireWidth = wireWidth / 100;
 
-  const filamentBrightness = 50 + normalizedVoltage * 45;
+  const filamentBrightness = 50 + normalizedVoltage * 45 * (0.5 + normalizedWireWidth/2); // Also factor in width for brightness
   const filamentColor = `hsl(50, 100%, ${filamentBrightness}%)`;
   const baseFilamentWidth = 1.5 + normalizedWireWidth * 3;
   const filamentStrokeWidth = baseFilamentWidth + normalizedVoltage * 3;
 
-  const innerGlowOpacity = Math.pow(normalizedVoltage, 1.2) * 0.9;
+  const innerGlowOpacity = Math.pow(normalizedVoltage, 1.2) * (0.5 + normalizedWireWidth/2) * 0.9;
   const innerGlowRadius = 15 + normalizedVoltage * 20;
-  const outerGlowOpacity = Math.pow(normalizedVoltage, 1.7) * 0.7;
+  const outerGlowOpacity = Math.pow(normalizedVoltage, 1.7) * (0.5 + normalizedWireWidth/2) * 0.7;
   const outerGlowRadius = 30 + normalizedVoltage * 30;
   
   const wireStrokeWidth = 4 + (wireWidth / 100) * 8;
@@ -300,9 +320,9 @@ const ElectricCircuit: React.FC = () => {
         
         {measureRate && (
             <g>
-                <line x1="70" y1={50 - wireStrokeWidth-2} x2="70" y2={50 + wireStrokeWidth+2} stroke="#fde047" strokeWidth="2" strokeDasharray="3 3" />
-                <rect x="80" y="20" width="95" height="22" fill="rgba(0,0,0,0.7)" rx="4" />
-                <text x="127" y="35" textAnchor="middle" fill="#fde047" fontSize="12" fontWeight="bold">
+                <line x1="0" y1={50 - wireStrokeWidth-2} x2="0" y2={50 + wireStrokeWidth+2} stroke="#fde047" strokeWidth="2" strokeDasharray="3 3" />
+                <rect x="10" y="20" width="95" height="22" fill="rgba(0,0,0,0.7)" rx="4" />
+                <text x="57" y="35" textAnchor="middle" fill="#fde047" fontSize="12" fontWeight="bold">
                     {displayRate.toFixed(3)} C/s
                 </text>
             </g>

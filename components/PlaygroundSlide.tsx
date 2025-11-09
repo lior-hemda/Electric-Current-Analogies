@@ -11,6 +11,7 @@ const TOTAL_PATH_LENGTH = 1000;
 const KID_COUNT = 15;
 const INITIAL_SLIDE_HEIGHT = 50;
 const INITIAL_SLIDE_WIDTH = 50;
+const CROSSING_POINT = 450; // A point in the "running back" path for measurement.
 
 
 // Update function signature to accept slideHeight
@@ -79,16 +80,19 @@ const PlaygroundSlide: React.FC = () => {
 
   const animationFrameId = useRef<number | null>(null);
   const slideHeightRef = useRef(slideHeight);
-  const kidsCrossed = useRef(0);
-  const lastMeasureTime = useRef(performance.now());
+  const slideWidthRef = useRef(slideWidth);
+  const crossingsTimestampsRef = useRef<number[]>([]);
+  const lastUiUpdateTimeRef = useRef(0);
   const measureRateRef = useRef(measureRate);
 
   useEffect(() => {
     measureRateRef.current = measureRate;
     if (!measureRate) {
-      kidsCrossed.current = 0;
-      lastMeasureTime.current = performance.now();
+      crossingsTimestampsRef.current = [];
       setDisplayRate(0);
+    } else {
+      crossingsTimestampsRef.current = [];
+      lastUiUpdateTimeRef.current = performance.now();
     }
   }, [measureRate]);
 
@@ -97,42 +101,59 @@ const PlaygroundSlide: React.FC = () => {
     slideHeightRef.current = slideHeight;
   }, [slideHeight]);
 
+  useEffect(() => {
+    slideWidthRef.current = slideWidth;
+  }, [slideWidth]);
+
 
   const runSimulation = useCallback(() => {
-    if (measureRateRef.current) {
-        const now = performance.now();
-        if (now - lastMeasureTime.current >= 1000) {
-            setDisplayRate(kidsCrossed.current);
-            kidsCrossed.current = 0;
-            lastMeasureTime.current = now;
+    const now = performance.now();
+
+    // Update UI display at a throttled rate using a rolling average
+    if (measureRateRef.current && now - lastUiUpdateTimeRef.current > 100) {
+        const fiveSecondsAgo = now - 5000;
+        const recentTimestamps = crossingsTimestampsRef.current.filter(t => t >= fiveSecondsAgo);
+        crossingsTimestampsRef.current = recentTimestamps;
+
+        let rate = 0;
+        if (recentTimestamps.length > 1) {
+            const timeSpanSeconds = (recentTimestamps[recentTimestamps.length - 1] - recentTimestamps[0]) / 1000;
+            if (timeSpanSeconds > 0) {
+                rate = (recentTimestamps.length - 1) / timeSpanSeconds;
+            }
         }
+        setDisplayRate(rate);
+        lastUiUpdateTimeRef.current = now;
     }
 
     const currentSlideHeight = slideHeightRef.current;
+    const currentSlideWidth = slideWidthRef.current;
+    const widthFactor = 0.2 + 0.8 * ((currentSlideWidth - 10) / 90);
     
     // Slide speed depends on height, elevator speed is constant
-    const slideSpeed = 1.5 + (currentSlideHeight / 100) * 4;
-    const runSpeed = 2;
-    const elevatorSpeed = 3;
+    const slideSpeed = (1.5 + (currentSlideHeight / 100) * 4) * widthFactor;
+    const runSpeed = 2 * widthFactor;
+    const elevatorSpeed = 3 * widthFactor;
 
     setKids(prevKids =>
       prevKids.map(k => {
         let speed = 0;
-        const currentProgressMod = k.progress % TOTAL_PATH_LENGTH;
+        const oldProgressMod = k.progress % TOTAL_PATH_LENGTH;
 
-        if (currentProgressMod < 300) {
+        if (oldProgressMod < 300) {
             speed = slideSpeed;
-        } else if (currentProgressMod < 600) {
+        } else if (oldProgressMod < 600) {
             speed = runSpeed;
         } else {
             speed = elevatorSpeed;
         }
 
         const newProgress = k.progress + speed;
+        const newProgressMod = newProgress % TOTAL_PATH_LENGTH;
         
         if (measureRateRef.current) {
-             if (k.progress % TOTAL_PATH_LENGTH > 600 && newProgress % TOTAL_PATH_LENGTH <= 600) {
-                kidsCrossed.current++;
+             if (oldProgressMod < CROSSING_POINT && newProgressMod >= CROSSING_POINT) {
+                crossingsTimestampsRef.current.push(performance.now());
             }
         }
 
@@ -309,7 +330,7 @@ const PlaygroundSlide: React.FC = () => {
                 <line x1="150" y1="190" x2="150" y2="215" stroke="#f472b6" strokeWidth="2" strokeDasharray="3 3" />
                 <rect x="160" y="180" width="105" height="22" fill="rgba(0,0,0,0.7)" rx="4" />
                 <text x="212" y="195" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">
-                    {displayRate.toFixed(1)} ילדים/שנייה
+                    {displayRate.toFixed(2)} ילדים/שנייה
                 </text>
             </g>
         )}
